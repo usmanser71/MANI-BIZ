@@ -1,0 +1,31 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MANI-BIZ-MD QR Code</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    #qrcode { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>WhatsApp Business Bot QR Code</h1>
+  <div id="qrcode">QR code will appear here</div>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script>
+    // Simple fetch request to get QR from server (you can extend this later)
+    async function fetchQR() {
+      const res = await fetch('/qr-data');
+      const qr = await res.text();
+      if(qr) {
+        const qrDiv = document.getElementById('qrcode');
+        qrDiv.innerHTML = '';
+        QRCode.toCanvas(qrDiv, qr);
+      }
+    }
+    fetchQR();
+    setInterval(fetchQR, 5000); // refresh every 5 seconds
+  </script>
+</body>
+</html>
+```
