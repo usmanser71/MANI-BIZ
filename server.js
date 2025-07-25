@@ -12,6 +12,7 @@ const { state, saveState } = useSingleFileAuthState('./session.json');
 app.use(express.static('public'));
 
 let sock;
+let latestQR = '';
 
 async function startSock() {
   sock = makeWASocket({
@@ -23,17 +24,22 @@ async function startSock() {
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
+
     if(qr) {
+      latestQR = qr;
       console.log('Scan this QR to connect:', qr);
     }
+
     if(connection === 'close') {
       const reason = lastDisconnect.error?.output?.statusCode;
       if(reason !== DisconnectReason.loggedOut) {
         startSock();
       }
     }
+
     if(connection === 'open') {
       console.log('Connected');
+      latestQR = '';
     }
   });
 
@@ -41,7 +47,6 @@ async function startSock() {
     if(!m.messages) return;
     const msg = m.messages[0];
     if(!msg.message || msg.key.fromMe) return;
-
     const from = msg.key.remoteJid;
     const message = msg.message.conversation?.toLowerCase();
 
@@ -67,6 +72,10 @@ startSock();
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
+});
+
+app.get('/qr-data', (req, res) => {
+  res.send(latestQR || '');
 });
 
 app.listen(PORT, () => {
