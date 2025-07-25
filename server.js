@@ -1,4 +1,3 @@
-```js
 const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@adiwajshing/baileys');
 const express = require('express');
 const qrcode = require('qrcode');
@@ -80,5 +79,4 @@ app.get('/qr-data', (req, res) => {
 
 app.listen(PORT, () => {
   console.log('Server running on port PORT');
-});
-```
+})
