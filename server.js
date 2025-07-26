@@ -74,6 +74,6 @@ app.get('/qr', (req, res) => {
     res.send('QR not ready or already scanned.');
   );
 
-app.listen(PORT, () => 
-  console.log(`Server running on port{PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
