@@ -41,7 +41,6 @@ async function startSock() {
       latestQR = '';
     }
   });
-
   sock.ev.on('messages.upsert', async (msg) => {
     if (!msg.messages || !msg.messages[0].message) return;
 
@@ -70,10 +69,10 @@ app.get('/', (req, res) => {
 app.get('/qr', (req, res) => {
   if (latestQR) {
     res.type('html').send(`<img src="latestQR" />`);
-  } else {
+   else 
     res.send('QR not ready or already scanned.');
   );
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, () => 
+  console.log(`Server running on port{PORT}`);
 });
