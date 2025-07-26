@@ -70,7 +70,7 @@ app.get('/', (req, res) => {
 app.get('/qr', (req, res) => {
   if (latestQR) {
     res.type('html').send(`<img src="latestQR" />`);
-   else 
+  } else {
     res.send('QR not ready or already scanned.');
   );
 
