@@ -1,21 +1,20 @@
 const express = require('express');
-const fs = require('fs');
 const qrcode = require('qrcode');
 const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 const { state, saveState } = useSingleFileAuthState('./session.json');
 
 let sock;
 let latestQR = '';
 
-app.use(express.static('public'));
-
 async function startSock() {
   sock = makeWASocket({
     auth: state,
-    printQRInTerminal: false
+    printQRInTerminal: true
   });
 
   sock.ev.on('creds.update', saveState);
@@ -25,36 +24,38 @@ async function startSock() {
 
     if (qr) {
       latestQR = await qrcode.toDataURL(qr);
-      console.log('QR code generated');
-    }
-
-    if (connection === 'open') {
- console.log('✅ WhatsApp connected!');
-      latestQR = '';
+      console.log('Scan the QR to connect.');
     }
 
     if (connection === 'close') {
       const reason = lastDisconnect?.error?.output?.statusCode;
       if (reason !== DisconnectReason.loggedOut) {
-        console.log('🔄 Reconnecting...');
         startSock();
       } else {
-        console.log('❌ Logged out.');
+        console.log('Logged out.');
       }
+    }
+
+    if (connection === 'open') {
+      console.log('✅ WhatsApp Connected!');
+      latestQR = '';
     }
   });
 
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.message || msg.key.fromMe) return;
+  sock.ev.on('messages.upsert', async (msg) => {
+    if (!msg.messages || !msg.messages[0].message) return;
 
-    const text = msg.message.conversation?.toLowerCase() || '';
-    const from = msg.key.remoteJid;
+    const message = msg.messages[0];
+    const text = message.message.conversation?.toLowerCase();
+    const from = message.key.remoteJid;
 
-    let reply = 'معذرت، میں سمجھ نہیں پایا۔';
-    if (text.includes('hi') || text.includes('hello')) reply = 'السلام علیکم! کیسے ہو؟';
-    else if (text.includes('menu')) reply = '1. Item A\n2. Item B';
-    else if (text.includes('price')) reply = 'Item A - Rs.100\nItem B - Rs.200';
+    if (!text) return;
+
+    let reply = 'Maaf kijiye, samajh nahi aaya.';
+
+    if (text.includes('menu')) {
+      reply = 'Menu:\n1. Product A\n2. Product B\n3. Product C';
+    }
 
     await sock.sendMessage(from, { text: reply });
   });
@@ -63,10 +64,16 @@ async function startSock() {
 startSock();
 
 app.get('/', (req, res) => {
-  if (!latestQR) return res.send('No QR yet. Wait for it to generate...');
-  res.send(`<h1>Scan QR to Connect</h1><img src="latestQR" />`);
-);
+  res.send(`<h2>MANI-BIZ-MD is running</h2><img src="/qr" width="250"/>`);
+});
+
+app.get('/qr', (req, res) => {
+  if (latestQR) {
+    res.type('html').send(`<img src="latestQR" />`);
+   else 
+    res.send('QR not ready or already scanned.');
+  );
 
 app.listen(PORT, () => 
-  console.log(`Server running on port PORT`)
+  console.log(`Server running on port{PORT}`);
 });
