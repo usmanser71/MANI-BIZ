@@ -71,7 +71,7 @@ app.get('/qr', async (req, res) => {
   if (!latestQR) return res.send('No QR code at the moment.');
   try {
     const img = await qrcode.toDataURL(latestQR);
-    res.send(`<h1>Scan this QR with WhatsApp</h1><img src="${img}" />`);
+    res.send('<h1>Scan this QR with WhatsApp</h1><img src="img" />');
   } catch (err) {
     res.status(500).send('Error generating QR');
   }
