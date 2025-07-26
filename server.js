@@ -1,15 +1,17 @@
 const express = require('express');
-const fs = require('fs');
 const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const qrcode = require('qrcode');
+const fs = require('fs');
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 const { state, saveState } = useSingleFileAuthState('./session.json');
+
+app.use(express.static('public'));
 
 let sock;
 let latestQR = '';
-
-app.use(express.static('public'));
 
 async function startSock() {
   sock = makeWASocket({
@@ -24,38 +26,35 @@ async function startSock() {
 
     if (qr) {
       latestQR = qr;
-      console.log('Scan this QR to connect:', qr);
+      console.log('Scan QR:', qr);
     }
 
     if (connection === 'close') {
-      const reason = lastDisconnect?.error?.output?.statusCode;
+const reason = lastDisconnect?.error?.output?.statusCode;
       if (reason !== DisconnectReason.loggedOut) {
         startSock();
       }
     }
 
     if (connection === 'open') {
-      console.log('Connected');
+      console.log('✅ Connected to WhatsApp');
       latestQR = '';
     }
   });
 
   sock.ev.on('messages.upsert', async (m) => {
-    if (!m.messages || !m.messages[0]) return;
-   const msg = m.messages[0];
-    if (!msg.message || msg.key.fromMe) return;
+    const msg = m.messages?.[0];
+    if (!msg?.message || msg.key.fromMe) return;
 
     const from = msg.key.remoteJid;
-    const message = msg.message.conversation?.toLowerCase();
+    const message = msg.message.conversation?.toLowerCase() || '';
 
-    let reply = "Maaf kijiye, main samajh nahi paaya.";
+    let reply = "Sorry, samajh nahi aaya.";
 
     if (message.includes('menu')) {
-      reply = "Hamare products:\n1. Product A\n2. Product B\n3. Product C";
+      reply = "Hamare products:\n1. A\n2. B\n3. C";
     } else if (message.includes('price')) {
-      reply = "Prices:\nProduct A - ₹100\nProduct B - ₹200\nProduct C - ₹300";
-    } else if (message.includes('address') || message.includes('location')) {
-      reply = "Address: 123 Business Street, City";
+      reply = "Price list:\nA - ₹100\nB - ₹200\nC - ₹300";
     } else if (message.includes('hello') || message.includes('hi')) {
       reply = "Assalamualaikum! Kaise madad kar sakta hoon?";
     }
@@ -67,7 +66,7 @@ async function startSock() {
 startSock();
 
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+  res.send('Bot server is running');
 });
 
 app.get('/qr-data', (req, res) => {
