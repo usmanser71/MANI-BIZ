@@ -57,8 +57,7 @@ async function startSock() {
     }
 
     await sock.sendMessage(from, { text: reply });
-  });
-}
+});
 
 startSock();
 
