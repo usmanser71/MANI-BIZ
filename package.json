@@ -1,17 +1,14 @@
 {
   "name": "mani-biz-md",
   "version": "1.0.0",
-  "description": "WhatsApp Business Bot with QR code session",
+  "description": "WhatsApp Bot",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "author": "Usman-Ser",
-  "license": "MIT",
   "dependencies": {
-    "@adiwajshing/baileys": "^4.4.0",
+    "@whiskeysockets/baileys": "^6.6.0",
     "express": "^4.18.2",
     "qrcode": "^1.5.1"
   }
 }
-
