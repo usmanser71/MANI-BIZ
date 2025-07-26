@@ -2,29 +2,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>MANI-BIZ-MD QR Code</title>
+  <title>QR Code | Business Bot</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-    #qrcode { margin-top: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    #qr {
+      font-size: 20px;
+      color: #333;
+      word-wrap: break-word;
+      max-width: 80%;
+      margin: auto;
+    }
   </style>
 </head>
 <body>
-  <h1>WhatsApp Business Bot QR Code</h1>
-  <div id="qrcode">QR code will appear here</div>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <h1>Scan QR to Connect Bot</h1>
+  <pre id="qr">Loading QR...</pre>
+
   <script>
-    // Simple fetch request to get QR from server (you can extend this later)
     async function fetchQR() {
       const res = await fetch('/qr-data');
       const qr = await res.text();
-      if(qr) {
-        const qrDiv = document.getElementById('qrcode');
-        qrDiv.innerHTML = '';
-        QRCode.toCanvas(qrDiv, qr);
-      }
+      document.getElementById('qr').innerText = qr || 'QR Not Available or Already Connected';
     }
+
+    setInterval(fetchQR, 3000);
     fetchQR();
-    setInterval(fetchQR, 5000); // refresh every 5 seconds
   </script>
 </body>
 </html>
