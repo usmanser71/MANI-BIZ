@@ -1,7 +1,6 @@
 const express = require('express');
 const qrcode = require('qrcode');
 const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,7 +13,7 @@ let latestQR = '';
 async function startSock() {
   sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true
+    printQRInTerminal: true,
   });
 
   sock.ev.on('creds.update', saveState);
@@ -41,6 +40,7 @@ async function startSock() {
       latestQR = '';
     }
   });
+
   sock.ev.on('messages.upsert', async (msg) => {
     if (!msg.messages || !msg.messages[0].message) return;
 
@@ -57,21 +57,26 @@ async function startSock() {
     }
 
     await sock.sendMessage(from, { text: reply });
-});
+  });
+}
 
 startSock();
 
+// Home Page
 app.get('/', (req, res) => {
   res.send(`<h2>MANI-BIZ-MD is running</h2><img src="/qr" width="250"/>`);
 });
 
+// QR Image
 app.get('/qr', (req, res) => {
   if (latestQR) {
-    res.type('html').send(`<img src="latestQR" />`);
-   else 
+    res.type('html').send(`<img src="${latestQR}" />`);
+  } else {
     res.send('QR not ready or already scanned.');
-  );
+  }
+});
 
-app.listen(PORT, () => 
-  console.log(`Server running on port{PORT}`);
+// Start Server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
