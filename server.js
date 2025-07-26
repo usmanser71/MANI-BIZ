@@ -77,9 +77,3 @@ app.get('/qr-data', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-```
-
-
-```bash
-npm install express qrcode @whiskeysockets/baileys
-```
