@@ -1,69 +1,45 @@
-const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useSingleFileAuthState } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
-const express = require('express');
 const qrcode = require('qrcode');
 const fs = require('fs');
-const path = require('path');
-
-const { state, saveState } = useSingleFileAuthState('./session.json');
-
+const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-let sock;
+// Auth setup
+const { state, saveState } = useSingleFileAuthState('./auth_info.json');
 
-async function connectToWhatsApp() {
-  sock = makeWASocket({
+// WhatsApp Connection
+async function startBot() {
+  const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: false,
+    printQRInTerminal: true
+  });
+
+  sock.ev.on('connection.update', async (update) => {
+    const { connection, qr } = update;
+    if (qr) {
+      console.log("QR Code received. Scan please.");
+      await qrcode.toFile('./qr.png', qr);
+    }
+    if (connection === 'open') {
+      console.log('✅ Bot is connected to WhatsApp!');
+    } else if (connection === 'close') {
+      console.log('❌ Connection closed. Reconnecting...');
+      startBot();
+    }
   });
 
   sock.ev.on('creds.update', saveState);
-
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
-
-    if (qr) {
-      const qrImage = await qrcode.toDataURL(qr);
-      fs.writeFileSync('./qr.html', `<img src="${qrImage}" />`);
-    }
-
-    if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect.error = new Boom(lastDisconnect.error)).output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('connection closed due to', lastDisconnect.error, ', reconnecting', shouldReconnect);
-      if (shouldReconnect) {
-        connectToWhatsApp();
-      }
-    } else if (connection === 'open') {
-      console.log('✅ WhatsApp connected');
-    }
-  });
-
-  sock.ev.on('messages.upsert', async (msg) => {
-    const m = msg.messages[0];
-    if (!m.message || m.key.fromMe) return;
-
-    const sender = m.key.remoteJid;
-    const text = m.message.conversation || m.message.extendedTextMessage?.text;
-
-    if (text?.toLowerCase() === 'hi') {
-      await sock.sendMessage(sender, { text: 'Hello! This is your WhatsApp bot 😊' });
-    }
-  });
 }
 
-connectToWhatsApp();
+startBot();
 
-// Serve QR code
+// Simple endpoint for checking bot status
 app.get('/', (req, res) => {
-  const file = path.join(__dirname, 'qr.html');
-  if (fs.existsSync(file)) {
-    res.sendFile(file);
-  } else {
-    res.send('QR not generated yet. Please wait...');
-  }
+  res.send('🤖 Mani-Biz-MD Bot is running on Render!');
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`🌐 Server running on port ${port}`);
 });
