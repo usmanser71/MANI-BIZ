@@ -1,45 +1,36 @@
 const { default: makeWASocket, useSingleFileAuthState } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
-const qrcode = require('qrcode');
 const fs = require('fs');
-const express = require('express');
-const app = express();
-const port = process.env.PORT || 3000;
 
-// Auth setup
 const { state, saveState } = useSingleFileAuthState('./auth_info.json');
 
-// WhatsApp Connection
-async function startBot() {
-  const sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: true
-  });
+const startSock = () => {
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: true,
+    });
 
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, qr } = update;
-    if (qr) {
-      console.log("QR Code received. Scan please.");
-      await qrcode.toFile('./qr.png', qr);
-    }
-    if (connection === 'open') {
-      console.log('✅ Bot is connected to WhatsApp!');
-    } else if (connection === 'close') {
-      console.log('❌ Connection closed. Reconnecting...');
-      startBot();
-    }
-  });
+    sock.ev.on('creds.update', saveState);
 
-  sock.ev.on('creds.update', saveState);
-}
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = (lastDisconnect.error = Boom)?.output?.statusCode !== 401;
+            console.log('Connection closed. Reconnecting...', shouldReconnect);
+            if (shouldReconnect) startSock();
+        } else if (connection === 'open') {
+            console.log('✅ Connected');
+        }
+    });
 
-startBot();
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.message) return;
+        const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+        if (text === 'hi') {
+            await sock.sendMessage(msg.key.remoteJid, { text: 'Hello from Render Bot!' });
+        }
+    });
+};
 
-// Simple endpoint for checking bot status
-app.get('/', (req, res) => {
-  res.send('🤖 Mani-Biz-MD Bot is running on Render!');
-});
-
-app.listen(port, () => {
-  console.log(`🌐 Server running on port ${port}`);
-});
+startSock();
