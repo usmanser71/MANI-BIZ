@@ -1,36 +1,85 @@
-const { default: makeWASocket, useSingleFileAuthState } = require('@whiskeysockets/baileys');
-const { Boom } = require('@hapi/boom');
-const fs = require('fs');
+const express = require('express');
+const qrcode = require('qrcode');
+const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+
+console.log("✅ Bot update test - Mani Khan");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 const { state, saveState } = useSingleFileAuthState('./auth_info.json');
 
-const startSock = () => {
-    const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: true,
-    });
+let sock;
+let latestQR = '';
 
-    sock.ev.on('creds.update', saveState);
+async function startSock() {
+  sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: true,
+  });
 
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
-        if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect.error = Boom)?.output?.statusCode !== 401;
-            console.log('Connection closed. Reconnecting...', shouldReconnect);
-            if (shouldReconnect) startSock();
-        } else if (connection === 'open') {
-            console.log('✅ Connected');
-        }
-    });
+  sock.ev.on('creds.update', saveState);
 
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message) return;
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
-        if (text === 'hi') {
-            await sock.sendMessage(msg.key.remoteJid, { text: 'Hello from Render Bot!' });
-        }
-    });
-};
+  sock.ev.on('connection.update', async (update) => {
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      latestQR = await qrcode.toDataURL(qr);
+      console.log('📸 Scan the QR to connect!');
+    }
+
+    if (connection === 'close') {
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      if (reason !== DisconnectReason.loggedOut) {
+        console.log('🔄 Reconnecting...');
+        startSock();
+      } else {
+        console.log('🚫 Logged out from WhatsApp');
+      }
+    }
+
+    if (connection === 'open') {
+      console.log('✅ WhatsApp Connected!');
+      latestQR = '';
+    }
+  });
+
+  sock.ev.on('messages.upsert', async (msg) => {
+    if (!msg.messages || !msg.messages[0].message) return;
+
+    const message = msg.messages[0];
+    const text = message.message.conversation?.toLowerCase();
+    const from = message.key.remoteJid;
+
+    if (!text) return;
+
+    let reply = '🤖 معذرت! میں آپ کی بات نہیں سمجھ پایا۔';
+
+    if (text.includes('menu')) {
+      reply = '📋 Menu:\n1. Product A\n2. Product B\n3. Product C';
+    }
+
+    await sock.sendMessage(from, { text: reply });
+  });
+}
 
 startSock();
+
+// Homepage
+app.get('/', (req, res) => {
+  res.send(`<h2>🤖 MANI-BIZ-MD is running</h2><img src="/qr" width="250"/>`);
+});
+
+// QR Route
+app.get('/qr', (req, res) => {
+  if (latestQR) {
+    res.type('html').send(`<img src="${latestQR}" />`);
+  } else {
+    res.send('QR not ready or already scanned.');
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
