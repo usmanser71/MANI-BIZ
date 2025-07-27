@@ -23,15 +23,16 @@ async function startSock() {
 
     if (qr) {
       latestQR = await qrcode.toDataURL(qr);
-      console.log('Scan the QR to connect.');
+      console.log('📱 Scan QR from browser');
     }
 
     if (connection === 'close') {
       const reason = lastDisconnect?.error?.output?.statusCode;
       if (reason !== DisconnectReason.loggedOut) {
+        console.log('🔄 Trying to reconnect...');
         startSock();
       } else {
-        console.log('Logged out.');
+        console.log('❌ Logged out from WhatsApp.');
       }
     }
 
@@ -45,8 +46,9 @@ async function startSock() {
     if (!msg.messages || !msg.messages[0].message) return;
 
     const message = msg.messages[0];
-    const text = message.message.conversation?.toLowerCase();
     const from = message.key.remoteJid;
+    const text = message.message.conversation?.toLowerCase() ||
+                 message.message.extendedTextMessage?.text?.toLowerCase();
 
     if (!text) return;
 
@@ -56,18 +58,20 @@ async function startSock() {
       reply = 'Menu:\n1. Product A\n2. Product B\n3. Product C';
     }
 
-    await sock.sendMessage(from, { text: reply });
+    try {
+      await sock.sendMessage(from, { text: reply });
+    } catch (err) {
+      console.error('❌ Message send failed:', err);
+    }
   });
 }
 
 startSock();
 
-// Home Page
 app.get('/', (req, res) => {
   res.send(`<h2>MANI-BIZ-MD is running</h2><img src="/qr" width="250"/>`);
 });
 
-// QR Image
 app.get('/qr', (req, res) => {
   if (latestQR) {
     res.type('html').send(`<img src="${latestQR}" />`);
@@ -76,7 +80,6 @@ app.get('/qr', (req, res) => {
   }
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
